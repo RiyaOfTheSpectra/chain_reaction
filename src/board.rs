@@ -6,6 +6,12 @@ use array2d::Array2D;
 type Location = (usize, usize);
 
 #[derive(Copy,Clone,Debug,PartialEq)]
+enum Error {
+    CellOccupied,
+    LocationInvalid,
+}
+
+#[derive(Copy,Clone,Debug,PartialEq)]
 enum CellPos {
     Corner,
     Edge,
@@ -158,6 +164,22 @@ impl Board {
                     (row+1, col),
                 ])
             }
+        }
+    }
+
+    fn try_move(&mut self, player: &Player, location: Location) -> Result<bool, Error> {
+        let (row, col) = location;
+        match self.grid.get(row, col) {
+            Some(cell) => if !cell.can_move_player(player) {
+                Err(Error::CellOccupied)
+            } else {
+                let mut new_cell = cell.clone();
+                new_cell.increment();
+                let burst = new_cell.is_bursting();
+                let _ = self.grid.set(row, col, new_cell);
+                Ok(burst)
+            }
+            None => Err(Error::LocationInvalid)
         }
     }
 }
@@ -325,5 +347,15 @@ mod tests {
 
         assert_eq!(cell.can_move_player(&Player::One), false);
         assert_eq!(cell.can_move_player(&Player::Two), true);
+    }
+
+    #[test]
+    fn board_move() {
+        let mut board = Board::new(4, 5);
+
+        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(false));
+        assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(Error::CellOccupied));
+        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(true));
+        assert_eq!(board.try_move(&Player::One, (4, 3)), Err(Error::LocationInvalid));
     }
 }
