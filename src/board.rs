@@ -2,20 +2,7 @@ use std::option::Option;
 
 use array2d::Array2D;
 
-#[derive(Copy,Clone,PartialEq,Debug)]
-struct Location {
-    row: usize,
-    col: usize,
-}
-
-impl Location {
-    fn new(row: usize, col: usize) -> Self {
-        Location {
-            row: row,
-            col: col,
-        }
-    }
-}
+type Location = (usize, usize);
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 enum CellPos {
@@ -102,9 +89,11 @@ impl Board {
         }
     }
 
-    fn get_neighbours(&self, row: usize, col: usize) -> Option<Vec<Location>> {
+    fn get_neighbours(&self, location: Location) -> Option<Vec<Location>> {
         let row_lim = self.rows;
         let col_lim = self.cols;
+
+        let (row, col) = location;
 
         if (row > row_lim) || (col > col_lim) {
             return None;
@@ -113,58 +102,58 @@ impl Board {
         if (row == 0) {
             if (col == 0) {
                 return Some(vec![
-                    Location::new(0, 1),
-                    Location::new(1, 0),
+                    (0, 1),
+                    (1, 0),
                 ]);
             } else if (col == col_lim) {
                 return Some(vec![
-                    Location::new(0, col_lim-1),
-                    Location::new(1, col_lim),
+                    (0, col_lim-1),
+                    (1, col_lim),
                 ]);
             } else {
                 return Some(vec![
-                    Location::new(0, col-1),
-                    Location::new(0, col+1),
-                    Location::new(1, col),
+                    (0, col-1),
+                    (0, col+1),
+                    (1, col),
                 ]);
             }
         } else if (row == row_lim) {
             if (col == 0) {
                 return Some(vec![
-                    Location::new(row_lim-1, 0),
-                    Location::new(row_lim, 1),
+                    (row_lim-1, 0),
+                    (row_lim, 1),
                 ]);
             } else if (col == col_lim) {
                 return Some(vec![
-                    Location::new(row_lim-1, col_lim),
-                    Location::new(row_lim, col_lim-1),
+                    (row_lim-1, col_lim),
+                    (row_lim, col_lim-1),
                 ]);
             } else {
                 return Some(vec![
-                    Location::new(row_lim-1, col),
-                    Location::new(row_lim, col-1),
-                    Location::new(row_lim, col+1),
+                    (row_lim-1, col),
+                    (row_lim, col-1),
+                    (row_lim, col+1),
                 ]);
             }
         } else {
             if (col == 0) {
                 return Some(vec![
-                    Location::new(row-1, 0),
-                    Location::new(row, 1),
-                    Location::new(row+1, 0),
+                    (row-1, 0),
+                    (row, 1),
+                    (row+1, 0),
                 ]);
             } else if (col == col_lim) {
                 return Some(vec![
-                    Location::new(row-1, col_lim),
-                    Location::new(row, col_lim-1),
-                    Location::new(row+1, col_lim),
+                    (row-1, col_lim),
+                    (row, col_lim-1),
+                    (row+1, col_lim),
                 ]);
             } else {
                 return Some(vec![
-                    Location::new(row-1, col),
-                    Location::new(row, col-1),
-                    Location::new(row, col+1),
-                    Location::new(row+1, col),
+                    (row-1, col),
+                    (row, col-1),
+                    (row, col+1),
+                    (row+1, col),
                 ]);
             }
         }
@@ -261,57 +250,57 @@ mod tests {
     fn check_neighbours() {
         let board = Board::new(6, 8);
 
-        assert_eq!(board.get_neighbours(0, 0), Some(vec![
-            Location::new(0, 1),
-            Location::new(1, 0),
+        assert_eq!(board.get_neighbours((0, 0)), Some(vec![
+            (0, 1),
+            (1, 0),
         ]));
 
-        assert_eq!(board.get_neighbours(5, 0), Some(vec![
-            Location::new(4, 0),
-            Location::new(5, 1),
+        assert_eq!(board.get_neighbours((5, 0)), Some(vec![
+            (4, 0),
+            (5, 1),
         ]));
 
-        assert_eq!(board.get_neighbours(5, 7), Some(vec![
-            Location::new(4, 7),
-            Location::new(5, 6),
+        assert_eq!(board.get_neighbours((5, 7)), Some(vec![
+            (4, 7),
+            (5, 6),
         ]));
 
-        assert_eq!(board.get_neighbours(0, 7), Some(vec![
-            Location::new(0, 6),
-            Location::new(1, 7),
+        assert_eq!(board.get_neighbours((0, 7)), Some(vec![
+            (0, 6),
+            (1, 7),
         ]));
 
-        assert_eq!(board.get_neighbours(0, 1), Some(vec![
-            Location::new(0, 0),
-            Location::new(0, 2),
-            Location::new(1, 1),
+        assert_eq!(board.get_neighbours((0, 1)), Some(vec![
+            (0, 0),
+            (0, 2),
+            (1, 1),
         ]));
 
-        assert_eq!(board.get_neighbours(1, 0), Some(vec![
-            Location::new(0, 0),
-            Location::new(1, 1),
-            Location::new(2, 0),
+        assert_eq!(board.get_neighbours((1, 0)), Some(vec![
+            (0, 0),
+            (1, 1),
+            (2, 0),
         ]));
 
-        assert_eq!(board.get_neighbours(5, 1), Some(vec![
-            Location::new(4, 1),
-            Location::new(5, 0),
-            Location::new(5, 2),
+        assert_eq!(board.get_neighbours((5, 1)), Some(vec![
+            (4, 1),
+            (5, 0),
+            (5, 2),
         ]));
 
-        assert_eq!(board.get_neighbours(1, 7), Some(vec![
-            Location::new(0, 7),
-            Location::new(1, 6),
-            Location::new(2, 7),
+        assert_eq!(board.get_neighbours((1, 7)), Some(vec![
+            (0, 7),
+            (1, 6),
+            (2, 7),
         ]));
 
-        assert_eq!(board.get_neighbours(2, 3), Some(vec![
-            Location::new(1, 3),
-            Location::new(2, 2),
-            Location::new(2, 4),
-            Location::new(3, 3),
+        assert_eq!(board.get_neighbours((2, 3)), Some(vec![
+            (1, 3),
+            (2, 2),
+            (2, 4),
+            (3, 3),
         ]));
 
-        assert_eq!(board.get_neighbours(6, 8), None);
+        assert_eq!(board.get_neighbours((6, 8)), None);
     }
 }
