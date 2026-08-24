@@ -91,7 +91,7 @@ impl Board {
         }
     }
 
-    fn burst(&self, row: usize, col: usize) -> Option<Vec<Location>> {
+    fn get_neighbours(&self, row: usize, col: usize) -> Option<Vec<Location>> {
         let row_lim = self.rows;
         let col_lim = self.cols;
 
@@ -247,60 +247,60 @@ mod tests {
     }
 
     #[test]
-    fn find_neighbours() {
+    fn check_neighbours() {
         let board = Board::new(6, 8);
 
-        assert_eq!(board.burst(0, 0), Some(vec![
+        assert_eq!(board.get_neighbours(0, 0), Some(vec![
             Location::new(0, 1),
             Location::new(1, 0),
         ]));
 
-        assert_eq!(board.burst(5, 0), Some(vec![
+        assert_eq!(board.get_neighbours(5, 0), Some(vec![
             Location::new(4, 0),
             Location::new(5, 1),
         ]));
 
-        assert_eq!(board.burst(5, 7), Some(vec![
+        assert_eq!(board.get_neighbours(5, 7), Some(vec![
             Location::new(4, 7),
             Location::new(5, 6),
         ]));
 
-        assert_eq!(board.burst(0, 7), Some(vec![
+        assert_eq!(board.get_neighbours(0, 7), Some(vec![
             Location::new(0, 6),
             Location::new(1, 7),
         ]));
 
-        assert_eq!(board.burst(0, 1), Some(vec![
+        assert_eq!(board.get_neighbours(0, 1), Some(vec![
             Location::new(0, 0),
             Location::new(0, 2),
             Location::new(1, 1),
         ]));
 
-        assert_eq!(board.burst(1, 0), Some(vec![
+        assert_eq!(board.get_neighbours(1, 0), Some(vec![
             Location::new(0, 0),
             Location::new(1, 1),
             Location::new(2, 0),
         ]));
 
-        assert_eq!(board.burst(5, 1), Some(vec![
+        assert_eq!(board.get_neighbours(5, 1), Some(vec![
             Location::new(4, 1),
             Location::new(5, 0),
             Location::new(5, 2),
         ]));
 
-        assert_eq!(board.burst(1, 7), Some(vec![
+        assert_eq!(board.get_neighbours(1, 7), Some(vec![
             Location::new(0, 7),
             Location::new(1, 6),
             Location::new(2, 7),
         ]));
 
-        assert_eq!(board.burst(2, 3), Some(vec![
+        assert_eq!(board.get_neighbours(2, 3), Some(vec![
             Location::new(1, 3),
             Location::new(2, 2),
             Location::new(2, 4),
             Location::new(3, 3),
         ]));
 
-        assert_eq!(board.burst(6, 8), None);
+        assert_eq!(board.get_neighbours(6, 8), None);
     }
 }
