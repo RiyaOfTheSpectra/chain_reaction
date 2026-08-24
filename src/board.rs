@@ -1,3 +1,4 @@
+#[allow(unused)]
 use std::option::Option;
 
 use array2d::Array2D;
@@ -11,7 +12,7 @@ enum CellPos {
     Bulk,
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 enum Player {
     One,
     Two,
@@ -49,11 +50,12 @@ impl Cell {
         self.contents += 1;
     }
 
-    fn check_player(&self, player: Player) -> bool {
-        match self.player {
-            player => true,
-            _ => false,
-        }
+    fn can_move_player(&self, player: &Player) -> bool {
+        (self.contents == 0) | (self.player == *player)
+    }
+
+    fn set_player(&mut self, player: &Player) {
+        self.player = player.clone();
     }
 }
 
@@ -302,5 +304,26 @@ mod tests {
         ]));
 
         assert_eq!(board.get_neighbours((6, 8)), None);
+        assert_eq!(board.get_neighbours((6, 7)), None);
+        assert_eq!(board.get_neighbours((5, 8)), None);
+    }
+
+    #[test]
+    fn player_equality() {
+        assert_eq!((Player::One == Player::Two), false);
+    }
+
+    #[test]
+    fn can_move() {
+        let mut cell = Cell::new(CellPos::Bulk);
+
+        assert_eq!(cell.can_move_player(&Player::One), true);
+        assert_eq!(cell.can_move_player(&Player::Two), true);
+
+        cell.set_player(&Player::Two);
+        cell.increment();
+
+        assert_eq!(cell.can_move_player(&Player::One), false);
+        assert_eq!(cell.can_move_player(&Player::Two), true);
     }
 }
