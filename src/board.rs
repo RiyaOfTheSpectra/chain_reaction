@@ -32,7 +32,7 @@ struct Cell {
 impl Cell {
     fn new(position: CellPos) -> Self {
         Cell {
-            position: position,
+            position,
             contents: 0,
             player: Player::One,
         }
@@ -50,12 +50,12 @@ impl Cell {
         self.contents += 1;
     }
 
-    fn can_move_player(&self, player: &Player) -> bool {
-        (self.contents == 0) | (self.player == *player)
+    fn set_player(&mut self, player: &Player) {
+        self.player = *player;
     }
 
-    fn set_player(&mut self, player: &Player) {
-        self.player = player.clone();
+    fn can_move_player(&self, player: &Player) -> bool {
+        (self.contents == 0) || (self.player == *player)
     }
 }
 
@@ -85,7 +85,7 @@ impl Board {
         let _ = grid.set(rows-1, cols-1, Cell::new(CellPos::Corner));
 
         Board {
-            grid: grid,
+            grid,
             rows: rows-1,
             cols: cols-1,
         }
@@ -101,62 +101,62 @@ impl Board {
             return None;
         }
 
-        if (row == 0) {
-            if (col == 0) {
-                return Some(vec![
+        if row == 0 {
+            if col == 0 {
+                Some(vec![
                     (0, 1),
                     (1, 0),
-                ]);
-            } else if (col == col_lim) {
-                return Some(vec![
+                ])
+            } else if col == col_lim {
+                Some(vec![
                     (0, col_lim-1),
                     (1, col_lim),
-                ]);
+                ])
             } else {
-                return Some(vec![
+                Some(vec![
                     (0, col-1),
                     (0, col+1),
                     (1, col),
-                ]);
+                ])
             }
-        } else if (row == row_lim) {
-            if (col == 0) {
-                return Some(vec![
+        } else if row == row_lim {
+            if col == 0 {
+                Some(vec![
                     (row_lim-1, 0),
                     (row_lim, 1),
-                ]);
-            } else if (col == col_lim) {
-                return Some(vec![
+                ])
+            } else if col == col_lim {
+                Some(vec![
                     (row_lim-1, col_lim),
                     (row_lim, col_lim-1),
-                ]);
+                ])
             } else {
-                return Some(vec![
+                Some(vec![
                     (row_lim-1, col),
                     (row_lim, col-1),
                     (row_lim, col+1),
-                ]);
+                ])
             }
         } else {
-            if (col == 0) {
-                return Some(vec![
+            if col == 0 {
+                Some(vec![
                     (row-1, 0),
                     (row, 1),
                     (row+1, 0),
-                ]);
-            } else if (col == col_lim) {
-                return Some(vec![
+                ])
+            } else if col == col_lim {
+                Some(vec![
                     (row-1, col_lim),
                     (row, col_lim-1),
                     (row+1, col_lim),
-                ]);
+                ])
             } else {
-                return Some(vec![
+                Some(vec![
                     (row-1, col),
                     (row, col-1),
                     (row, col+1),
                     (row+1, col),
-                ]);
+                ])
             }
         }
     }
