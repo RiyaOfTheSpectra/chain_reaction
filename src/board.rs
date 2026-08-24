@@ -1,4 +1,21 @@
+use std::option::Option;
+
 use array2d::Array2D;
+
+#[derive(Copy,Clone,PartialEq,Debug)]
+struct Location {
+    row: usize,
+    col: usize,
+}
+
+impl Location {
+    fn new(row: usize, col: usize) -> Self {
+        Location {
+            row: row,
+            col: col,
+        }
+    }
+}
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 enum CellPos {
@@ -7,7 +24,7 @@ enum CellPos {
     Bulk,
 }
 
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug)]
 enum Player {
     One,
     Two,
@@ -17,7 +34,7 @@ enum Player {
     Six,
 }
 
-#[derive(Copy,Clone)]
+#[derive(Copy,Clone,Debug)]
 struct Cell {
     position: CellPos,
     contents: u8,
@@ -44,6 +61,8 @@ impl Cell {
 
 struct Board {
     grid: Array2D<Cell>,
+    rows: usize,
+    cols: usize,
 }
 
 impl Board {
@@ -67,6 +86,76 @@ impl Board {
 
         Board {
             grid: grid,
+            rows: rows-1,
+            cols: cols-1,
+        }
+    }
+
+    fn burst(&self, row: usize, col: usize) -> Option<Vec<Location>> {
+        let row_lim = self.rows;
+        let col_lim = self.cols;
+
+        if (row > row_lim) || (col > col_lim) {
+            return None;
+        }
+
+        if (row == 0) {
+            if (col == 0) {
+                return Some(vec![
+                    Location::new(0, 1),
+                    Location::new(1, 0),
+                ]);
+            } else if (col == col_lim) {
+                return Some(vec![
+                    Location::new(0, col_lim-1),
+                    Location::new(1, col_lim),
+                ]);
+            } else {
+                return Some(vec![
+                    Location::new(0, col-1),
+                    Location::new(0, col+1),
+                    Location::new(1, col),
+                ]);
+            }
+        } else if (row == row_lim) {
+            if (col == 0) {
+                return Some(vec![
+                    Location::new(row_lim-1, 0),
+                    Location::new(row_lim, 1),
+                ]);
+            } else if (col == col_lim) {
+                return Some(vec![
+                    Location::new(row_lim-1, col_lim),
+                    Location::new(row_lim, col_lim-1),
+                ]);
+            } else {
+                return Some(vec![
+                    Location::new(row_lim-1, col),
+                    Location::new(row_lim, col-1),
+                    Location::new(row_lim, col+1),
+                ]);
+            }
+        } else {
+            if (col == 0) {
+                return Some(vec![
+                    Location::new(row-1, 0),
+                    Location::new(row, 1),
+                    Location::new(row+1, 0),
+                ]);
+            } else if (col == col_lim) {
+                return Some(vec![
+                    Location::new(row-1, col_lim),
+                    Location::new(row, col_lim-1),
+                    Location::new(row+1, col_lim),
+                ]);
+            } else {
+                return Some(vec![
+                    Location::new(row-1, col),
+                    Location::new(row, col-1),
+                    Location::new(row, col+1),
+                    Location::new(row+1, col),
+                ]);
+            }
         }
     }
 }
@@ -155,5 +244,63 @@ mod tests {
         let _ = col_vec[cols-1].clone()
             .into_iter()
             .map(|cell| { assert_eq!(cell.position, CellPos::Edge); });
+    }
+
+    #[test]
+    fn find_neighbours() {
+        let board = Board::new(6, 8);
+
+        assert_eq!(board.burst(0, 0), Some(vec![
+            Location::new(0, 1),
+            Location::new(1, 0),
+        ]));
+
+        assert_eq!(board.burst(5, 0), Some(vec![
+            Location::new(4, 0),
+            Location::new(5, 1),
+        ]));
+
+        assert_eq!(board.burst(5, 7), Some(vec![
+            Location::new(4, 7),
+            Location::new(5, 6),
+        ]));
+
+        assert_eq!(board.burst(0, 7), Some(vec![
+            Location::new(0, 6),
+            Location::new(1, 7),
+        ]));
+
+        assert_eq!(board.burst(0, 1), Some(vec![
+            Location::new(0, 0),
+            Location::new(0, 2),
+            Location::new(1, 1),
+        ]));
+
+        assert_eq!(board.burst(1, 0), Some(vec![
+            Location::new(0, 0),
+            Location::new(1, 1),
+            Location::new(2, 0),
+        ]));
+
+        assert_eq!(board.burst(5, 1), Some(vec![
+            Location::new(4, 1),
+            Location::new(5, 0),
+            Location::new(5, 2),
+        ]));
+
+        assert_eq!(board.burst(1, 7), Some(vec![
+            Location::new(0, 7),
+            Location::new(1, 6),
+            Location::new(2, 7),
+        ]));
+
+        assert_eq!(board.burst(2, 3), Some(vec![
+            Location::new(1, 3),
+            Location::new(2, 2),
+            Location::new(2, 4),
+            Location::new(3, 3),
+        ]));
+
+        assert_eq!(board.burst(6, 8), None);
     }
 }
