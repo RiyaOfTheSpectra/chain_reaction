@@ -17,7 +17,7 @@ impl Location {
     }
 }
 
-#[derive(Copy,Clone,PartialEq,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 enum CellPos {
     Corner,
     Edge,
@@ -55,6 +55,17 @@ impl Cell {
             CellPos::Corner => self.contents > 1u8,
             CellPos::Edge => self.contents > 2u8,
             CellPos::Bulk => self.contents > 3u8,
+        }
+    }
+
+    fn increment(&mut self) {
+        self.contents += 1;
+    }
+
+    fn check_player(&self, player: Player) -> bool {
+        match self.player {
+            player => true,
+            _ => false,
         }
     }
 }
