@@ -256,18 +256,21 @@ mod tests {
         assert_eq!(corner_10.position, CellPos::Corner);
         assert_eq!(corner_11.position, CellPos::Corner);
 
-        let _ = row_vec[0].clone()
-            .into_iter()
-            .map(|cell| { assert_eq!(cell.position, CellPos::Edge); });
-        let _ = row_vec[rows-1].clone()
-            .into_iter()
-            .map(|cell| { assert_eq!(cell.position, CellPos::Edge); });
-        let _ = col_vec[0].clone()
-            .into_iter()
-            .map(|cell| { assert_eq!(cell.position, CellPos::Edge); });
-        let _ = col_vec[cols-1].clone()
-            .into_iter()
-            .map(|cell| { assert_eq!(cell.position, CellPos::Edge); });
+        for cell in row_vec[0].clone() {
+            assert_eq!(cell.position, CellPos::Edge);
+        }
+
+        for cell in row_vec[rows-1].clone() {
+            assert_eq!(cell.position, CellPos::Edge);
+        }
+
+        for cell in col_vec[0].clone() {
+            assert_eq!(cell.position, CellPos::Edge);
+        }
+
+        for cell in col_vec[cols-1].clone() {
+            assert_eq!(cell.position, CellPos::Edge);
+        }
     }
 
     #[test]
