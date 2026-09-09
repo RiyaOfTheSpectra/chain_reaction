@@ -75,23 +75,31 @@ impl Board {
     fn new(rows: usize, cols: usize) -> Self {
         let mut grid = Array2D::filled_with(
             Cell::new(CellPos::Bulk),
-            rows,
-            cols,
+            rows-2,
+            cols-2,
+        ).as_rows();
+
+        for row in &mut grid {
+            row.insert(0, Cell::new(CellPos::Edge));
+            row.push(Cell::new(CellPos::Edge));
+        }
+
+        let mut edge_row = Vec::new();
+        for i in 0..cols { edge_row.push(Cell::new(CellPos::Edge)); }
+
+        grid.insert(
+            0,
+            edge_row.clone()
         );
+        grid.push(edge_row.clone());
 
-        let _ = grid.set_column_major(0, Cell::new(CellPos::Edge));
-        let _ = grid.set_column_major(cols - 1, Cell::new(CellPos::Edge));
-
-        let _ = grid.set_row_major(0, Cell::new(CellPos::Edge));
-        let _ = grid.set_row_major(rows - 1, Cell::new(CellPos::Edge));
-
-        let _ = grid.set(0, 0, Cell::new(CellPos::Corner));
-        let _ = grid.set(0, cols-1, Cell::new(CellPos::Corner));
-        let _ = grid.set(rows-1, 0, Cell::new(CellPos::Corner));
-        let _ = grid.set(rows-1, cols-1, Cell::new(CellPos::Corner));
+        grid[0][0] = Cell::new(CellPos::Corner);
+        grid[0][cols-1] = Cell::new(CellPos::Corner);
+        grid[rows-1][0] = Cell::new(CellPos::Corner);
+        grid[rows-1][cols-1] = Cell::new(CellPos::Corner);
 
         Board {
-            grid,
+            grid: Array2D::from_rows(&grid).unwrap(),
             rows: rows-1,
             cols: cols-1,
         }
@@ -187,6 +195,8 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use simple_logger::SimpleLogger;
+    use std::{println as info, println as warn};
 
     #[test]
     fn will_burst() {
@@ -231,6 +241,10 @@ mod tests {
 
     #[test]
     fn board_edges() {
+        SimpleLogger::new()
+            .init()
+            .unwrap();
+
         let board = Board::new(4, 5);
 
         let mut row_vec = board.grid.as_rows();
@@ -256,21 +270,25 @@ mod tests {
         assert_eq!(corner_10.position, CellPos::Corner);
         assert_eq!(corner_11.position, CellPos::Corner);
 
-        for cell in row_vec[0].clone() {
-            assert_eq!(cell.position, CellPos::Edge);
-        }
+        row_vec[0].clone()
+            .iter()
+            .zip(1..rows-1)
+            .for_each(|(cell, i)| assert_eq!(cell.position, CellPos::Edge, "0, {}", i));
 
-        for cell in row_vec[rows-1].clone() {
-            assert_eq!(cell.position, CellPos::Edge);
-        }
+        row_vec[rows-1].clone()
+            .iter()
+            .zip(1..rows-1)
+            .for_each(|(cell, i)| assert_eq!(cell.position, CellPos::Edge, "{}, {}", rows-1, i));
 
-        for cell in col_vec[0].clone() {
-            assert_eq!(cell.position, CellPos::Edge);
-        }
+        col_vec[0].clone()
+            .iter()
+            .zip(1..cols-1)
+            .for_each(|(cell, i)| assert_eq!(cell.position, CellPos::Edge, "{}, 0", i));
 
-        for cell in col_vec[cols-1].clone() {
-            assert_eq!(cell.position, CellPos::Edge);
-        }
+        col_vec[cols-1].clone()
+            .iter()
+            .zip(1..cols-1)
+            .for_each(|(cell, i)| assert_eq!(cell.position, CellPos::Edge, "{}, {}", i, cols-1));
     }
 
     #[test]
@@ -360,5 +378,15 @@ mod tests {
         assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(Error::CellOccupied));
         assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(true));
         assert_eq!(board.try_move(&Player::One, (4, 3)), Err(Error::LocationInvalid));
+
+    }
+
+    #[test]
+    fn make_board() {
+        SimpleLogger::new()
+            .init()
+            .unwrap();
+
+        let _ = Board::new(4, 5);
     }
 }
