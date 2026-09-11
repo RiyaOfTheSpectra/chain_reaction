@@ -432,7 +432,7 @@ mod tests {
             .init()
             .unwrap();
 
-        let board = Board::new(4, 5);
+        let board = Board::new(4, 5, vec![Player::One,Player::Two]);
 
         let mut row_vec = board.grid.as_rows();
         let mut col_vec = board.grid.as_columns();
@@ -480,7 +480,7 @@ mod tests {
 
     #[test]
     fn check_neighbours() {
-        let board = Board::new(6, 8);
+        let board = Board::new(6, 8, vec![Player::One,Player::Two]);
 
         assert_eq!(board.get_neighbours(&(0, 0)), Some(vec![
             (0, 1),
@@ -559,14 +559,14 @@ mod tests {
 
     #[test]
     fn board_move() {
-        let mut board = Board::new(4, 5);
+        let mut board = Board::new(4, 5, vec![Player::One,Player::Two]);
 
         assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
-        assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(Error::CellOccupied));
+        assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(BoardError::CellOccupied((0, 0), Player::One)));
         assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
-        assert_eq!(board.try_move(&Player::One, (4, 3)), Err(Error::LocationInvalid));
+        assert_eq!(board.try_move(&Player::One, (4, 3)), Err(BoardError::LocationInvalid((4, 3))));
 
-        let mut check_board = Board::new(4,5);
+        let mut check_board = Board::new(4, 5, vec![Player::One,Player::Two]);
         let _ = check_board.try_move(&Player::One, (1, 0));
         let _ = check_board.try_move(&Player::One, (0, 1));
 
@@ -578,7 +578,7 @@ mod tests {
         SimpleLogger::new()
             .init()
             .unwrap();
-        let mut board = Board::new(4, 5);
+        let mut board = Board::new(4, 5, vec![Player::One,Player::Two]);
 
         let cell_pos = board.grid.get(2, 0)
             .unwrap()
@@ -594,7 +594,7 @@ mod tests {
         board.try_move(&Player::One, (0, 0));
         board.try_move(&Player::One, (0, 0));
 
-        let mut check_board = Board::new(4,5);
+        let mut check_board = Board::new(4, 5, vec![Player::One,Player::Two]);
         check_board.try_move(&Player::One, (1, 0));
         check_board.try_move(&Player::One, (1, 0));
         check_board.try_move(&Player::One, (0, 1));
@@ -613,7 +613,7 @@ mod tests {
             .init()
             .unwrap();
 
-        let mut board = Board::new(4, 5);
+        let mut board = Board::new(4, 5, vec![Player::One]);
 
         board.try_move(&Player::One, (1, 0));
         board.try_move(&Player::One, (1, 0));
