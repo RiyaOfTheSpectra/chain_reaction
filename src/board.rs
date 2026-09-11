@@ -1,7 +1,19 @@
 #[allow(unused)]
 use std::option::Option;
+use std::vec::Vec;
+use std::string::String;
+use std::fmt;
+use std::collections::{
+    HashMap,
+    hash_map::Entry,
+};
 
 use array2d::Array2D;
+use itertools::Itertools;
+use log::{
+    info,
+    warn,
+};
 
 type Location = (usize, usize);
 
@@ -18,6 +30,16 @@ enum CellPos {
     Bulk,
 }
 
+impl CellPos {
+    fn limit(&self) -> u8 {
+        match self {
+            &CellPos::Corner 	=> 1,
+            &CellPos::Edge 		=> 2,
+            &CellPos::Bulk 		=> 3,
+        }
+    }
+}
+
 #[derive(Copy,Clone,Debug,PartialEq)]
 enum Player {
     One,
@@ -28,7 +50,7 @@ enum Player {
     Six,
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 struct Cell {
     position: CellPos,
     contents: u8,
@@ -45,15 +67,15 @@ impl Cell {
     }
 
     fn is_bursting(&self) -> bool {
-        match self.position {
-            CellPos::Corner => self.contents > 1u8,
-            CellPos::Edge => self.contents > 2u8,
-            CellPos::Bulk => self.contents > 3u8,
-        }
+        self.contents > self.position.limit()
     }
 
     fn increment(&mut self) {
         self.contents += 1;
+    }
+
+    fn clear(&mut self) {
+        self.contents -= self.position.limit() + 1 ;
     }
 
     fn set_player(&mut self, player: &Player) {
@@ -61,10 +83,62 @@ impl Cell {
     }
 
     fn can_move_player(&self, player: &Player) -> bool {
-        (self.contents == 0) || (self.player == *player)
+        (self.contents == 0) || (&self.player == player)
     }
 }
 
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.contents {
+            1 => write!(f, "1"),
+            2 => write!(f, "2"),
+            3 => write!(f, "3"),
+            _ => write!(f, " "),
+        }
+    }
+}
+
+#[derive(Clone,Debug,PartialEq)]
+struct Queue {
+    map: HashMap<Location, u8>,
+}
+
+impl Queue {
+    fn new() -> Self {
+        Queue { map: HashMap::new(), }
+    }
+
+    fn append(&mut self, board: &Board, loc: Location) {
+        let limit = board.get_type(&loc).limit() + 1;
+
+        match self.map.entry(loc) {
+            Entry::Vacant(_) => {self.map.insert(loc, 1);},
+            Entry::Occupied(mut entry) => {
+                let val = entry.get_mut();
+                if *val < limit { *val += 1; }
+            }
+        }
+    }
+
+    fn from_vec(vec: Vec<Location>, board: &Board) -> Self {
+        let mut queue = Self::new();
+        let _ = vec.into_iter()
+            .map(|loc| queue.append(board, loc));
+        queue
+    }
+
+    fn to_vec(&self) -> Vec<Location> {
+        let mut vec = Vec::new();
+        for key in self.map.keys() {
+            for i in 0u8..*self.map.get(key).unwrap() {
+                vec.push(*key);
+            }
+        }
+        vec
+    }
+}
+
+#[derive(Debug,PartialEq)]
 struct Board {
     grid: Array2D<Cell>,
     rows: usize,
@@ -105,11 +179,11 @@ impl Board {
         }
     }
 
-    fn get_neighbours(&self, location: Location) -> Option<Vec<Location>> {
+    fn get_neighbours(&self, location: &Location) -> Option<Vec<Location>> {
         let row_lim = self.rows;
         let col_lim = self.cols;
 
-        let (row, col) = location;
+        let (row, col) = *location;
 
         if (row > row_lim) || (col > col_lim) {
             return None;
@@ -175,20 +249,109 @@ impl Board {
         }
     }
 
-    fn try_move(&mut self, player: &Player, location: Location) -> Result<bool, Error> {
+    fn get_type(&self, loc: &Location) -> CellPos {
+        let (row, col) = *loc;
+        self.grid.get(row, col).expect("Invalid location.").position
+    }
+
+    fn capture_cell(&mut self, player: &Player, location: &Location) -> bool {
+        let (row, col) = *location;
+
+        let mut new_cell = *self.grid.get(row, col)
+            .expect("Invalid location.");
+        new_cell.increment();
+        new_cell.set_player(player);
+        let burst = new_cell.is_bursting();
+        if burst { new_cell.clear(); }
+        let _ = self.grid.set(row, col, new_cell);
+        burst
+    }
+
+    fn burst(&mut self, player: &Player, location: Location) -> Result<(), Error> {
+        match self.get_neighbours(&location) {
+            Some(mut queue) => {
+                while !queue.is_empty() {
+                    let mut extra_q = Queue::new();
+                    warn!("{:?}", queue);
+                    for loc in &queue {
+                        if self.capture_cell(player, loc) {
+                            for i in self.get_neighbours(loc).unwrap() {
+                                extra_q.append(self, i);
+                            }
+                        }
+                    }
+                    warn!("Adding {:?}", extra_q);
+                    queue = extra_q.to_vec();
+                }
+
+                Ok(())
+            }
+            None => Err(Error::LocationInvalid)
+        }
+    }
+
+    fn try_move(&mut self, player: &Player, location: Location) -> Result<(), Error> {
         let (row, col) = location;
         match self.grid.get(row, col) {
             Some(cell) => if !cell.can_move_player(player) {
                 Err(Error::CellOccupied)
             } else {
-                let mut new_cell = cell.clone();
+                info!("Player {:?} moving to {:?}", player, location);
+                let mut new_cell = *cell;
                 new_cell.increment();
                 let burst = new_cell.is_bursting();
+                if burst {
+                    new_cell.clear();
+                }
+
                 let _ = self.grid.set(row, col, new_cell);
-                Ok(burst)
+
+                if burst {
+                    match self.burst(player, location) {
+                        Ok(()) => Ok(()),
+                        Err(error) => Err(error),
+                    }
+                } else {
+                    Ok(())
+                }
             }
             None => Err(Error::LocationInvalid)
         }
+    }
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut board = self.grid.as_rows();
+        let mut inter_str = String::from("├─");
+        let mut top_str = String::from("╭─");
+        let mut bottom_str = String::from("╰─");
+
+        for _i in 0..board[0].len()-1 {
+            inter_str.push_str("──┼─");
+            top_str.push_str("──┬─");
+            bottom_str.push_str("──┴─");
+        }
+
+        inter_str.push_str("──┤");
+        top_str.push_str("──╮");
+        bottom_str.push_str("──╯");
+
+        let mut board_str = top_str;
+
+        board.into_iter()
+            .map(|row| {
+                let mut row_str = String::from("│");
+                row.iter()
+                    .for_each(|cell| row_str.push_str(format!(" {} │", cell).as_str()));
+                row_str
+            })
+            .collect::<Vec<String>>()
+            .iter()
+            .intersperse(&inter_str)
+            .for_each(|row_str| board_str = format!("{}\n{}", board_str, row_str));
+
+        write!(f, "{}\n{}", board_str, bottom_str)
     }
 }
 
@@ -295,60 +458,60 @@ mod tests {
     fn check_neighbours() {
         let board = Board::new(6, 8);
 
-        assert_eq!(board.get_neighbours((0, 0)), Some(vec![
+        assert_eq!(board.get_neighbours(&(0, 0)), Some(vec![
             (0, 1),
             (1, 0),
         ]));
 
-        assert_eq!(board.get_neighbours((5, 0)), Some(vec![
+        assert_eq!(board.get_neighbours(&(5, 0)), Some(vec![
             (4, 0),
             (5, 1),
         ]));
 
-        assert_eq!(board.get_neighbours((5, 7)), Some(vec![
+        assert_eq!(board.get_neighbours(&(5, 7)), Some(vec![
             (4, 7),
             (5, 6),
         ]));
 
-        assert_eq!(board.get_neighbours((0, 7)), Some(vec![
+        assert_eq!(board.get_neighbours(&(0, 7)), Some(vec![
             (0, 6),
             (1, 7),
         ]));
 
-        assert_eq!(board.get_neighbours((0, 1)), Some(vec![
+        assert_eq!(board.get_neighbours(&(0, 1)), Some(vec![
             (0, 0),
             (0, 2),
             (1, 1),
         ]));
 
-        assert_eq!(board.get_neighbours((1, 0)), Some(vec![
+        assert_eq!(board.get_neighbours(&(1, 0)), Some(vec![
             (0, 0),
             (1, 1),
             (2, 0),
         ]));
 
-        assert_eq!(board.get_neighbours((5, 1)), Some(vec![
+        assert_eq!(board.get_neighbours(&(5, 1)), Some(vec![
             (4, 1),
             (5, 0),
             (5, 2),
         ]));
 
-        assert_eq!(board.get_neighbours((1, 7)), Some(vec![
+        assert_eq!(board.get_neighbours(&(1, 7)), Some(vec![
             (0, 7),
             (1, 6),
             (2, 7),
         ]));
 
-        assert_eq!(board.get_neighbours((2, 3)), Some(vec![
+        assert_eq!(board.get_neighbours(&(2, 3)), Some(vec![
             (1, 3),
             (2, 2),
             (2, 4),
             (3, 3),
         ]));
 
-        assert_eq!(board.get_neighbours((6, 8)), None);
-        assert_eq!(board.get_neighbours((6, 7)), None);
-        assert_eq!(board.get_neighbours((5, 8)), None);
+        assert_eq!(board.get_neighbours(&(6, 8)), None);
+        assert_eq!(board.get_neighbours(&(6, 7)), None);
+        assert_eq!(board.get_neighbours(&(5, 8)), None);
     }
 
     #[test]
@@ -374,11 +537,50 @@ mod tests {
     fn board_move() {
         let mut board = Board::new(4, 5);
 
-        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(false));
+        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
         assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(Error::CellOccupied));
-        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(true));
+        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
         assert_eq!(board.try_move(&Player::One, (4, 3)), Err(Error::LocationInvalid));
 
+        let mut check_board = Board::new(4,5);
+        let _ = check_board.try_move(&Player::One, (1, 0));
+        let _ = check_board.try_move(&Player::One, (0, 1));
+
+        assert_eq!(board, check_board);
+    }
+
+    #[test]
+    fn chain_reaction() {
+        SimpleLogger::new()
+            .init()
+            .unwrap();
+        let mut board = Board::new(4, 5);
+
+        let cell_pos = board.grid.get(2, 0)
+            .unwrap()
+            .position;
+        assert_eq!(cell_pos, CellPos::Edge);
+
+        board.try_move(&Player::One, (1, 1));
+        board.try_move(&Player::One, (1, 1));
+        board.try_move(&Player::One, (1, 0));
+        board.try_move(&Player::One, (1, 0));
+        board.try_move(&Player::One, (0, 1));
+        board.try_move(&Player::One, (0, 1));
+        board.try_move(&Player::One, (0, 0));
+        board.try_move(&Player::One, (0, 0));
+
+        let mut check_board = Board::new(4,5);
+        check_board.try_move(&Player::One, (1, 0));
+        check_board.try_move(&Player::One, (1, 0));
+        check_board.try_move(&Player::One, (0, 1));
+        check_board.try_move(&Player::One, (0, 1));
+        check_board.try_move(&Player::One, (0, 2));
+        check_board.try_move(&Player::One, (2, 0));
+        check_board.try_move(&Player::One, (2, 1));
+        check_board.try_move(&Player::One, (1, 2));
+
+        assert_eq!(board, check_board, "\n{}", board);
     }
 
     #[test]
@@ -387,6 +589,13 @@ mod tests {
             .init()
             .unwrap();
 
-        let _ = Board::new(4, 5);
+        let mut board = Board::new(4, 5);
+
+        board.try_move(&Player::One, (1, 0));
+        board.try_move(&Player::One, (1, 0));
+        board.try_move(&Player::One, (2, 0));
+        board.try_move(&Player::One, (2, 0));
+
+        println!("{}", board);
     }
 }
