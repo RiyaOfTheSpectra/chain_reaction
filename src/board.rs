@@ -52,7 +52,7 @@ impl CellPos {
     }
 }
 
-#[derive(Copy,Clone,Debug,PartialEq)]
+#[derive(Copy,Clone,Debug,Eq,PartialEq,Hash)]
 enum Player {
     One,
     Two,
@@ -294,6 +294,26 @@ impl Board {
         burst
     }
 
+    fn has_lost(&self) -> Vec<Player> {
+        let mut cell_counts = HashMap::new();
+        for player in self.players.iter() {
+            cell_counts.insert(*player, 0u16);
+        }
+
+        self.grid.clone()
+            .elements_row_major_iter()
+            .for_each(|cell| { cell_counts.entry(cell.player).and_modify(|count| *count += 1); });
+
+        let mut losers = Vec::new();
+
+        cell_counts.iter().for_each(|(player, count)| {
+                if *count == 0 {
+                    losers.push(*player);
+                }
+            });
+
+        losers
+    }
 
     fn burst(&mut self, player: &Player, location: Location) {
         let mut queue = self.get_neighbours(&location).unwrap();
@@ -621,5 +641,22 @@ mod tests {
         board.try_move(&Player::One, (2, 0));
 
         println!("{}", board);
+    }
+
+    #[test]
+    fn losing() {
+        SimpleLogger::new()
+            .init()
+            .unwrap();
+
+        let mut board = Board::new(4, 5, vec![Player::One,Player::Two,Player::Three]);
+
+        board.try_move(&Player::One, (2, 0));
+        board.try_move(&Player::Two, (1, 0));
+
+        assert_eq!(board.has_lost(), vec![Player::Three]);
+
+        board.try_move(&Player::Three, (2, 1));
+        assert_eq!(board.has_lost(), Vec::<Player>::new());
     }
 }
