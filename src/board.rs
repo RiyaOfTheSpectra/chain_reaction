@@ -267,26 +267,20 @@ impl Board {
         burst
     }
 
-    fn burst(&mut self, player: &Player, location: Location) -> Result<(), Error> {
-        match self.get_neighbours(&location) {
-            Some(mut queue) => {
-                while !queue.is_empty() {
-                    let mut extra_q = Queue::new();
-                    warn!("{:?}", queue);
-                    for loc in &queue {
-                        if self.capture_cell(player, loc) {
-                            for i in self.get_neighbours(loc).unwrap() {
-                                extra_q.append(self, i);
-                            }
-                        }
-                    }
-                    warn!("Adding {:?}", extra_q);
-                    queue = extra_q.to_vec();
-                }
 
-                Ok(())
+    fn burst(&mut self, player: &Player, location: Location) {
+        let mut queue = self.get_neighbours(&location)?
+        while !queue.is_empty() {
+            let mut extra_q = Queue::new();
+            for loc in &queue {
+                if self.capture_cell(player, loc) {
+                    for i in self.get_neighbours(loc).unwrap() {
+                        extra_q.append(self, i);
+                    }
+                }
             }
-            None => Err(Error::LocationInvalid)
+            warn!("Adding {:?}", extra_q);
+            queue = extra_q.to_vec();
         }
     }
 
@@ -307,10 +301,7 @@ impl Board {
                 let _ = self.grid.set(row, col, new_cell);
 
                 if burst {
-                    match self.burst(player, location) {
-                        Ok(()) => Ok(()),
-                        Err(error) => Err(error),
-                    }
+                    self.burst(player, location)
                 } else {
                     Ok(())
                 }
