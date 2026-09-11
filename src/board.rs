@@ -42,12 +42,12 @@ impl CellPos {
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 enum Player {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
 }
 
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -62,7 +62,7 @@ impl Cell {
         Cell {
             position,
             contents: 0,
-            player: Player::One,
+            player: Player::A,
         }
     }
 
@@ -366,32 +366,32 @@ mod tests {
         let corner_a = Cell {
             position: CellPos::Corner,
             contents: 1,
-            player: Player::One,
+            player: Player::A,
         };
         let corner_b = Cell {
             position: CellPos::Corner,
             contents: 2,
-            player: Player::One,
+            player: Player::A,
         };
         let edge_a = Cell {
             position: CellPos::Edge,
             contents: 2,
-            player: Player::One,
+            player: Player::A,
         };
         let edge_b = Cell {
             position: CellPos::Edge,
             contents: 3,
-            player: Player::One,
+            player: Player::A,
         };
         let bulk_a = Cell {
             position: CellPos::Bulk,
             contents: 2,
-            player: Player::One,
+            player: Player::A,
         };
         let bulk_b = Cell {
             position: CellPos::Bulk,
             contents: 4,
-            player: Player::One,
+            player: Player::A,
         };
 
         assert_eq!(corner_a.is_bursting(), false);
@@ -516,35 +516,35 @@ mod tests {
 
     #[test]
     fn player_equality() {
-        assert_eq!((Player::One == Player::Two), false);
+        assert_eq!((Player::A == Player::B), false);
     }
 
     #[test]
     fn can_move() {
         let mut cell = Cell::new(CellPos::Bulk);
 
-        assert_eq!(cell.can_move_player(&Player::One), true);
-        assert_eq!(cell.can_move_player(&Player::Two), true);
+        assert_eq!(cell.can_move_player(&Player::A), true);
+        assert_eq!(cell.can_move_player(&Player::B), true);
 
-        cell.set_player(&Player::Two);
+        cell.set_player(&Player::B);
         cell.increment();
 
-        assert_eq!(cell.can_move_player(&Player::One), false);
-        assert_eq!(cell.can_move_player(&Player::Two), true);
+        assert_eq!(cell.can_move_player(&Player::A), false);
+        assert_eq!(cell.can_move_player(&Player::B), true);
     }
 
     #[test]
     fn board_move() {
         let mut board = Board::new(4, 5);
 
-        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
-        assert_eq!(board.try_move(&Player::Two, (0, 0)), Err(Error::CellOccupied));
-        assert_eq!(board.try_move(&Player::One, (0, 0)), Ok(()));
-        assert_eq!(board.try_move(&Player::One, (4, 3)), Err(Error::LocationInvalid));
+        assert_eq!(board.try_move(&Player::A, (0, 0)), Ok(()));
+        assert_eq!(board.try_move(&Player::B, (0, 0)), Err(Error::CellOccupied));
+        assert_eq!(board.try_move(&Player::A, (0, 0)), Ok(()));
+        assert_eq!(board.try_move(&Player::A, (4, 3)), Err(Error::LocationInvalid));
 
         let mut check_board = Board::new(4,5);
-        let _ = check_board.try_move(&Player::One, (1, 0));
-        let _ = check_board.try_move(&Player::One, (0, 1));
+        let _ = check_board.try_move(&Player::A, (1, 0));
+        let _ = check_board.try_move(&Player::A, (0, 1));
 
         assert_eq!(board, check_board);
     }
@@ -561,24 +561,24 @@ mod tests {
             .position;
         assert_eq!(cell_pos, CellPos::Edge);
 
-        board.try_move(&Player::One, (1, 1));
-        board.try_move(&Player::One, (1, 1));
-        board.try_move(&Player::One, (1, 0));
-        board.try_move(&Player::One, (1, 0));
-        board.try_move(&Player::One, (0, 1));
-        board.try_move(&Player::One, (0, 1));
-        board.try_move(&Player::One, (0, 0));
-        board.try_move(&Player::One, (0, 0));
+        board.try_move(&Player::A, (1, 1));
+        board.try_move(&Player::A, (1, 1));
+        board.try_move(&Player::A, (1, 0));
+        board.try_move(&Player::A, (1, 0));
+        board.try_move(&Player::A, (0, 1));
+        board.try_move(&Player::A, (0, 1));
+        board.try_move(&Player::A, (0, 0));
+        board.try_move(&Player::A, (0, 0));
 
         let mut check_board = Board::new(4,5);
-        check_board.try_move(&Player::One, (1, 0));
-        check_board.try_move(&Player::One, (1, 0));
-        check_board.try_move(&Player::One, (0, 1));
-        check_board.try_move(&Player::One, (0, 1));
-        check_board.try_move(&Player::One, (0, 2));
-        check_board.try_move(&Player::One, (2, 0));
-        check_board.try_move(&Player::One, (2, 1));
-        check_board.try_move(&Player::One, (1, 2));
+        check_board.try_move(&Player::A, (1, 0));
+        check_board.try_move(&Player::A, (1, 0));
+        check_board.try_move(&Player::A, (0, 1));
+        check_board.try_move(&Player::A, (0, 1));
+        check_board.try_move(&Player::A, (0, 2));
+        check_board.try_move(&Player::A, (2, 0));
+        check_board.try_move(&Player::A, (2, 1));
+        check_board.try_move(&Player::A, (1, 2));
 
         assert_eq!(board, check_board, "\n{}", board);
     }
@@ -591,10 +591,10 @@ mod tests {
 
         let mut board = Board::new(4, 5);
 
-        board.try_move(&Player::One, (1, 0));
-        board.try_move(&Player::One, (1, 0));
-        board.try_move(&Player::One, (2, 0));
-        board.try_move(&Player::One, (2, 0));
+        board.try_move(&Player::A, (1, 0));
+        board.try_move(&Player::A, (1, 0));
+        board.try_move(&Player::A, (2, 0));
+        board.try_move(&Player::A, (2, 0));
 
         println!("{}", board);
     }
