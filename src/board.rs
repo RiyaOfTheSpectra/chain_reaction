@@ -1,4 +1,5 @@
 #[allow(unused)]
+use std::error::Error;
 use std::option::Option;
 use std::vec::Vec;
 use std::string::String;
@@ -18,9 +19,20 @@ use log::{
 type Location = (usize, usize);
 
 #[derive(Copy,Clone,Debug,PartialEq)]
-enum Error {
-    CellOccupied,
-    LocationInvalid,
+enum BoardError {
+    CellOccupied(Location, Player),
+    LocationInvalid(Location),
+    NoSuchPlayer(Player),
+}
+
+impl fmt::Display for BoardError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BoardError::CellOccupied(loc, player) => write!(f, "Cell at ({}, {}) is occupied by player {}.", loc.0, loc.1, player),
+            BoardError::LocationInvalid(loc) => write!(f, "Cell at ({}, {}) doesn’t exist.", loc.0, loc.1),
+            BoardError::NoSuchPlayer(player) => write!(f, "Player {} isn’t playing.", player),
+        }
+    }
 }
 
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -48,6 +60,19 @@ enum Player {
     Four,
     Five,
     Six,
+}
+
+impl fmt::Display for Player {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Player::One => write!(f, "One"),
+            Player::Two => write!(f, "Two"),
+            Player::Three => write!(f, "Three"),
+            Player::Four => write!(f, "Four"),
+            Player::Five => write!(f, "Five"),
+            Player::Six => write!(f, "Six"),
+        }
+    }
 }
 
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -271,7 +296,7 @@ impl Board {
 
 
     fn burst(&mut self, player: &Player, location: Location) {
-        let mut queue = self.get_neighbours(&location)?
+        let mut queue = self.get_neighbours(&location).unwrap();
         while !queue.is_empty() {
             let mut extra_q = Queue::new();
             for loc in &queue {
@@ -286,29 +311,35 @@ impl Board {
         }
     }
 
-    fn try_move(&mut self, player: &Player, location: Location) -> Result<(), Error> {
+    fn try_move(&mut self, player: &Player, location: Location) -> Result<(), BoardError> {
         let (row, col) = location;
         match self.grid.get(row, col) {
-            Some(cell) => if !cell.can_move_player(player) {
-                Err(Error::CellOccupied)
-            } else {
-                info!("Player {:?} moving to {:?}", player, location);
-                let mut new_cell = *cell;
-                new_cell.increment();
-                let burst = new_cell.is_bursting();
-                if burst {
-                    new_cell.clear();
-                }
+            Some(cell) => if self.players.contains(player) {
+                if cell.can_move_player(player) {
+                    info!("Player {:?} moving to {:?}", player, location);
+                    let mut new_cell = *cell;
+                    new_cell.set_player(player);
+                    new_cell.increment();
+                    let burst = new_cell.is_bursting();
+                    if burst {
+                        new_cell.clear();
+                    }
 
-                let _ = self.grid.set(row, col, new_cell);
+                    let _ = self.grid.set(row, col, new_cell);
 
-                if burst {
-                    self.burst(player, location)
+                    if burst {
+                        self.burst(player, location);
+                        Ok(())
+                    } else {
+                        Ok(())
+                    }
                 } else {
-                    Ok(())
+                    Err(BoardError::CellOccupied(location, cell.player))
                 }
+            } else {
+                Err(BoardError::NoSuchPlayer(*player))
             }
-            None => Err(Error::LocationInvalid)
+            None => Err(BoardError::LocationInvalid(location))
         }
     }
 }
