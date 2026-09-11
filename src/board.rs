@@ -138,15 +138,16 @@ impl Queue {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 struct Board {
     grid: Array2D<Cell>,
     rows: usize,
     cols: usize,
+    players: Vec<Player>,
 }
 
 impl Board {
-    fn new(rows: usize, cols: usize) -> Self {
+    fn new(rows: usize, cols: usize, players: Vec<Player>) -> Self {
         let mut grid = Array2D::filled_with(
             Cell::new(CellPos::Bulk),
             rows-2,
@@ -176,6 +177,7 @@ impl Board {
             grid: Array2D::from_rows(&grid).unwrap(),
             rows: rows-1,
             cols: cols-1,
+            players,
         }
     }
 
