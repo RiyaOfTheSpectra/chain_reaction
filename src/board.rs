@@ -10,7 +10,6 @@ use std::collections::{
 };
 
 use array2d::Array2D;
-use itertools::Itertools;
 use log::{
     info,
     warn,
@@ -383,6 +382,8 @@ impl fmt::Display for Board {
 
         let mut board_str = top_str;
 
+        let mut not_first = false;
+
         board.into_iter()
             .map(|row| {
                 let mut row_str = String::from("│");
@@ -390,10 +391,14 @@ impl fmt::Display for Board {
                     .for_each(|cell| row_str.push_str(format!(" {} │", cell).as_str()));
                 row_str
             })
-            .collect::<Vec<String>>()
-            .iter()
-            .intersperse(&inter_str)
-            .for_each(|row_str| board_str = format!("{}\n{}", board_str, row_str));
+            .for_each(|row_str| {
+                if not_first {
+                    board_str = format!("{}\n{}\n{}", board_str, inter_str, row_str)
+                } else {
+                    board_str = format!("{}\n{}", board_str, row_str);
+                    not_first = true
+                }
+            });
 
         write!(f, "{}\n{}", board_str, bottom_str)
     }
@@ -640,7 +645,19 @@ mod tests {
         board.try_move(&Player::One, (2, 0));
         board.try_move(&Player::One, (2, 0));
 
-        println!("{}", board);
+        assert_eq!(
+            format!("{}", board),
+            r#"╭───┬───┬───┬───┬───╮
+│   │   │   │   │   │
+├───┼───┼───┼───┼───┤
+│ 2 │   │   │   │   │
+├───┼───┼───┼───┼───┤
+│ 2 │   │   │   │   │
+├───┼───┼───┼───┼───┤
+│   │   │   │   │   │
+╰───┴───┴───┴───┴───╯"#,
+            "\n{}", board
+        );
     }
 
     #[test]
