@@ -154,7 +154,7 @@ impl Queue {
     fn to_vec(&self) -> Vec<Location> {
         let mut vec = Vec::new();
         for key in self.map.keys() {
-            for i in 0u8..*self.map.get(key).unwrap() {
+            for _i in 0u8..*self.map.get(key).unwrap() {
                 vec.push(*key);
             }
         }
@@ -184,7 +184,7 @@ impl Board {
         }
 
         let mut edge_row = Vec::new();
-        for i in 0..cols { edge_row.push(Cell::new(CellPos::Edge)); }
+        for _i in 0..cols { edge_row.push(Cell::new(CellPos::Edge)); }
 
         grid.insert(
             0,
@@ -301,14 +301,16 @@ impl Board {
 
         self.grid.clone()
             .elements_row_major_iter()
-            .for_each(|cell| { cell_counts.entry(cell.player).and_modify(|count| *count += 1); });
+            .for_each(|cell| {
+                cell_counts.entry(cell.player)
+                    .and_modify(|count| *count += 1);
+            });
 
         let mut losers = Vec::new();
 
-        cell_counts.iter().for_each(|(player, count)| {
-                if *count == 0 {
-                    losers.push(*player);
-                }
+        cell_counts.iter()
+            .for_each(|(player, count)| {
+                if *count == 0 { losers.push(*player); }
             });
 
         losers
@@ -325,8 +327,15 @@ impl Board {
                     }
                 }
             }
+
             warn!("Adding {:?}", extra_q);
             queue = extra_q.to_vec();
+
+            self.has_lost()
+                .into_iter()
+                .for_each(|player| {
+                    self.players.extract_if(.., |list_player| *list_player == player).for_each(drop);
+                });
         }
     }
 
