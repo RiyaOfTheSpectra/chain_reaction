@@ -19,6 +19,7 @@ pub type Location = (usize, usize);
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub enum BoardError {
+    TooManyPlayers,
     CellOccupied(Location, Player),
     LocationInvalid(Location),
     NoSuchPlayer(Player),
@@ -27,6 +28,7 @@ pub enum BoardError {
 impl fmt::Display for BoardError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            BoardError::TooManyPlayers => write!(f, "Too many players.  Maximum is 6"),
             BoardError::CellOccupied(loc, player) => write!(f, "Cell at ({}, {}) is occupied by player {}.", loc.0, loc.1, player),
             BoardError::LocationInvalid(loc) => write!(f, "Cell at ({}, {}) doesn’t exist.", loc.0, loc.1),
             BoardError::NoSuchPlayer(player) => write!(f, "Player {} isn’t playing.", player),
@@ -60,6 +62,33 @@ pub enum Player {
     E,
     F,
     Empty,
+}
+
+impl Player {
+    #[cfg(not(test))]
+    fn from_u8(num: u8) -> Option<Vec<Player>> {
+        match num {
+            2 => Some(vec![Player::A, Player::B]),
+            3 => Some(vec![Player::A, Player::B, Player::C]),
+            4 => Some(vec![Player::A, Player::B, Player::C, Player::D]),
+            5 => Some(vec![Player::A, Player::B, Player::C, Player::D, Player::E]),
+            6 => Some(vec![Player::A, Player::B, Player::C, Player::D, Player::E, Player::F]),
+            _ => None,
+        }
+    }
+
+    #[cfg(test)]
+    fn from_u8(num: u8) -> Option<Vec<Player>> {
+        match num {
+            1 => Some(vec![Player::A]),
+            2 => Some(vec![Player::A, Player::B]),
+            3 => Some(vec![Player::A, Player::B, Player::C]),
+            4 => Some(vec![Player::A, Player::B, Player::C, Player::D]),
+            5 => Some(vec![Player::A, Player::B, Player::C, Player::D, Player::E]),
+            6 => Some(vec![Player::A, Player::B, Player::C, Player::D, Player::E, Player::F]),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Player {
@@ -176,7 +205,14 @@ pub struct Board {
 }
 
 impl Board {
-    fn new(rows: usize, cols: usize, players: Vec<Player>) -> Self {
+    fn new(rows: usize, cols: usize, num_players: u8) -> Result<Self, BoardError> {
+        let players;
+        if let Some(vec) = Player::from_u8(num_players) {
+            players = vec;
+        } else {
+            return Err(BoardError::TooManyPlayers);
+        }
+
         let mut grid = Array2D::filled_with(
             Cell::new(CellPos::Bulk),
             rows-2,
@@ -202,12 +238,12 @@ impl Board {
         grid[rows-1][0] = Cell::new(CellPos::Corner);
         grid[rows-1][cols-1] = Cell::new(CellPos::Corner);
 
-        Board {
+        Ok(Board {
             grid: Array2D::from_rows(&grid).unwrap(),
             rows: rows-1,
             cols: cols-1,
             players,
-        }
+        })
     }
 
     fn get_neighbours(&self, location: &Location) -> Option<Vec<Location>> {
@@ -471,7 +507,7 @@ mod tests {
             .init()
             .unwrap();
 
-        let board = Board::new(4, 5, vec![Player::A,Player::B]);
+        let board = Board::new(4, 5, 2).unwrap();
 
         let mut row_vec = board.grid.as_rows();
         let mut col_vec = board.grid.as_columns();
@@ -519,7 +555,7 @@ mod tests {
 
     #[test]
     fn check_neighbours() {
-        let board = Board::new(6, 8, vec![Player::A,Player::B]);
+        let board = Board::new(6, 8, 2).unwrap();
 
         assert_eq!(board.get_neighbours(&(0, 0)), Some(vec![
             (0, 1),
@@ -598,14 +634,14 @@ mod tests {
 
     #[test]
     fn board_move() {
-        let mut board = Board::new(4, 5, vec![Player::A,Player::B]);
+        let mut board = Board::new(4, 5, 2).unwrap();
 
         assert_eq!(board.try_move(&Player::A, (0, 0)), Ok(()));
         assert_eq!(board.try_move(&Player::B, (0, 0)), Err(BoardError::CellOccupied((0, 0), Player::A)));
         assert_eq!(board.try_move(&Player::A, (0, 0)), Ok(()));
         assert_eq!(board.try_move(&Player::A, (4, 3)), Err(BoardError::LocationInvalid((4, 3))));
 
-        let mut check_board = Board::new(4, 5, vec![Player::A]);
+        let mut check_board = Board::new(4, 5, 1).unwrap();
         let _ = check_board.try_move(&Player::A, (1, 0));
         let _ = check_board.try_move(&Player::A, (0, 1));
 
@@ -614,7 +650,7 @@ mod tests {
 
     #[test]
     fn chain_reaction() {
-        let mut board = Board::new(4, 5, vec![Player::A,Player::B]);
+        let mut board = Board::new(4, 5, 2).unwrap();
 
         let cell_pos = board.grid.get(2, 0)
             .unwrap()
@@ -630,7 +666,7 @@ mod tests {
         board.try_move(&Player::A, (0, 0));
         board.try_move(&Player::A, (0, 0));
 
-        let mut check_board = Board::new(4, 5, vec![Player::A]);
+        let mut check_board = Board::new(4, 5, 1).unwrap();
         check_board.try_move(&Player::A, (1, 0));
         check_board.try_move(&Player::A, (1, 0));
         check_board.try_move(&Player::A, (0, 1));
@@ -645,7 +681,7 @@ mod tests {
 
     #[test]
     fn make_board() {
-        let mut board = Board::new(4, 5, vec![Player::A]);
+        let mut board = Board::new(4, 5, 2).unwrap();
 
         board.try_move(&Player::A, (1, 0));
         board.try_move(&Player::A, (1, 0));
@@ -669,7 +705,7 @@ mod tests {
 
     #[test]
     fn losing() {
-        let mut board = Board::new(4, 5, vec![Player::A,Player::B,Player::C]);
+        let mut board = Board::new(4, 5, 3).unwrap();
 
         board.try_move(&Player::A, (2, 0));
         board.try_move(&Player::B, (1, 0));
