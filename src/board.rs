@@ -15,10 +15,10 @@ use log::{
     warn,
 };
 
-type Location = (usize, usize);
+pub type Location = (usize, usize);
 
 #[derive(Copy,Clone,Debug,PartialEq)]
-enum BoardError {
+pub enum BoardError {
     CellOccupied(Location, Player),
     LocationInvalid(Location),
     NoSuchPlayer(Player),
@@ -43,22 +43,23 @@ enum CellPos {
 
 impl CellPos {
     fn limit(&self) -> u8 {
-        match self {
-            &CellPos::Corner 	=> 1,
-            &CellPos::Edge 		=> 2,
-            &CellPos::Bulk 		=> 3,
+        match *self {
+            CellPos::Corner 	=> 1,
+            CellPos::Edge 		=> 2,
+            CellPos::Bulk 		=> 3,
         }
     }
 }
 
 #[derive(Copy,Clone,Debug,Eq,PartialEq,Hash)]
-enum Player {
+pub enum Player {
     A,
     B,
     C,
     D,
     E,
     F,
+    Empty,
 }
 
 impl fmt::Display for Player {
@@ -70,6 +71,7 @@ impl fmt::Display for Player {
             Player::D => write!(f, "D"),
             Player::E => write!(f, "E"),
             Player::F => write!(f, "F"),
+            Player::Empty => write!(f, " "),
         }
     }
 }
@@ -86,7 +88,7 @@ impl Cell {
         Cell {
             position,
             contents: 0,
-            player: Player::A,
+            player: Player::Empty,
         }
     }
 
@@ -99,7 +101,10 @@ impl Cell {
     }
 
     fn clear(&mut self) {
-        self.contents -= self.position.limit() + 1 ;
+        self.contents -= self.position.limit() + 1;
+        if self.contents == 0 {
+            self.player = Player::Empty;
+        }
     }
 
     fn set_player(&mut self, player: &Player) {
@@ -107,7 +112,7 @@ impl Cell {
     }
 
     fn can_move_player(&self, player: &Player) -> bool {
-        (self.contents == 0) || (&self.player == player)
+        (self.player == Player::Empty) || (&self.player == player)
     }
 }
 
@@ -163,7 +168,7 @@ impl Queue {
 }
 
 #[derive(Clone,Debug,PartialEq)]
-struct Board {
+pub struct Board {
     grid: Array2D<Cell>,
     rows: usize,
     cols: usize,
@@ -600,18 +605,15 @@ mod tests {
         assert_eq!(board.try_move(&Player::A, (0, 0)), Ok(()));
         assert_eq!(board.try_move(&Player::A, (4, 3)), Err(BoardError::LocationInvalid((4, 3))));
 
-        let mut check_board = Board::new(4, 5, vec![Player::A,Player::B]);
+        let mut check_board = Board::new(4, 5, vec![Player::A]);
         let _ = check_board.try_move(&Player::A, (1, 0));
         let _ = check_board.try_move(&Player::A, (0, 1));
 
-        assert_eq!(board, check_board);
+        assert_eq!(board, check_board, "\nBoard\n{}\nCheck Board\n{}", board, check_board);
     }
 
     #[test]
     fn chain_reaction() {
-        SimpleLogger::new()
-            .init()
-            .unwrap();
         let mut board = Board::new(4, 5, vec![Player::A,Player::B]);
 
         let cell_pos = board.grid.get(2, 0)
@@ -628,7 +630,7 @@ mod tests {
         board.try_move(&Player::A, (0, 0));
         board.try_move(&Player::A, (0, 0));
 
-        let mut check_board = Board::new(4, 5, vec![Player::A,Player::B]);
+        let mut check_board = Board::new(4, 5, vec![Player::A]);
         check_board.try_move(&Player::A, (1, 0));
         check_board.try_move(&Player::A, (1, 0));
         check_board.try_move(&Player::A, (0, 1));
@@ -643,10 +645,6 @@ mod tests {
 
     #[test]
     fn make_board() {
-        SimpleLogger::new()
-            .init()
-            .unwrap();
-
         let mut board = Board::new(4, 5, vec![Player::A]);
 
         board.try_move(&Player::A, (1, 0));
